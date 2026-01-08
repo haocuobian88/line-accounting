@@ -4,26 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>快速記帳</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         body { font-family: sans-serif; padding: 20px; background-color: #f5f5f5; }
         .container { max-width: 400px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        input, select, button { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
-        button { background-color: #06c755; color: white; border: none; font-weight: bold; cursor: pointer; }
+        input, select, button { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
+        button { background-color: #06c755; color: white; border: none; font-weight: bold; cursor: pointer; height: 50px; }
         button:hover { background-color: #05b34c; }
+        .loading { display: none; text-align: center; color: #666; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2 style="text-align:center;">💸 記一筆</h2>
+    <h3 style="text-align:center;">💸 記一筆</h3>
     
-    <form id="accountingForm" action="https://n8n-m7p3.zeabur.app/webhook/line" method="GET">
-        
+    <form id="accountingForm">
         <label>項目</label>
         <input type="text" name="項目" placeholder="例如：午餐" required>
 
         <label>金額</label>
-        <input type="number" name="金額" placeholder="100" required>
+        <input type="number" name="金額" placeholder="100" required inputmode="numeric">
 
         <label>誰花的</label>
         <select name="測試員">
@@ -31,28 +32,66 @@
             <option value="小美">小美</option>
         </select>
 
-        <button type="submit">送出記帳</button>
+        <button type="submit" id="submitBtn">送出記帳</button>
+        <p class="loading" id="loadingMsg">資料傳送中...</p>
     </form>
 </div>
 
 <script>
-    // 這個腳本是為了讓送出後不要跳轉到白畫面，而是顯示成功
-    const form = document.getElementById('accountingForm');
-    form.addEventListener('submit', function(e) {
-        e.preventDefault(); // 阻止預設跳轉
-        const formData = new FormData(form);
-        // 將參數組合成 URL
-        const params = new URLSearchParams(formData);
-        const url = form.action + '?' + params.toString();
+    // 🔴 請在這裡填入您的 LIFF ID
+    const MY_LIFF_ID = "2008642471-B6stNtQK"; 
+    
+    // 🔴 請在這裡填入您的 n8n Production Webhook 網址
+    const WEBHOOK_URL = "https://n8n-m7p3.zeabur.app/webhook/line";
 
-        fetch(url)
+    // 初始化 LIFF
+    window.onload = function() {
+        liff.init({ liffId: MY_LIFF_ID })
+            .then(() => {
+                console.log("LIFF 初始化成功");
+                // 如果需要，這裡可以自動抓取使用者名稱 (liff.getProfile)
+            })
+            .catch((err) => {
+                console.error("LIFF 初始化失敗", err);
+                alert("LIFF 啟動失敗，請檢查 ID");
+            });
+    };
+
+    // 表單送出邏輯
+    const form = document.getElementById('accountingForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const loadingMsg = document.getElementById('loadingMsg');
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault(); // 阻止表單預設跳轉
+        
+        // 鎖定按鈕避免重複按
+        submitBtn.disabled = true;
+        submitBtn.style.backgroundColor = "#ccc";
+        loadingMsg.style.display = "block";
+
+        const formData = new FormData(form);
+        const params = new URLSearchParams(formData);
+        const finalUrl = WEBHOOK_URL + '?' + params.toString();
+
+        fetch(finalUrl)
             .then(response => {
+                // 成功後的動作
                 alert('✅ 記帳成功！');
-                form.reset(); // 清空表單
-                // 如果是在 LIFF 中，可以在這裡加入關閉視窗的程式碼
+                
+                // 關閉 LIFF 視窗 (這是最關鍵的一步)
+                if (liff.isInClient()) {
+                    liff.closeWindow();
+                } else {
+                    // 如果是在電腦瀏覽器測試，就只重置表單
+                    location.reload(); 
+                }
             })
             .catch(error => {
                 alert('❌ 發生錯誤，請稍後再試');
+                submitBtn.disabled = false;
+                submitBtn.style.backgroundColor = "#06c755";
+                loadingMsg.style.display = "none";
             });
     });
 </script>
