@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>快速記帳</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f5f5f5; }
+        .container { max-width: 400px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        input, select, button { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        button { background-color: #06c755; color: white; border: none; font-weight: bold; cursor: pointer; }
+        button:hover { background-color: #05b34c; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2 style="text-align:center;">💸 記一筆</h2>
+    
+    <form id="accountingForm" action="https://n8n-m7p3.zeabur.app/webhook/line" method="GET">
+        
+        <label>項目</label>
+        <input type="text" name="項目" placeholder="例如：午餐" required>
+
+        <label>金額</label>
+        <input type="number" name="金額" placeholder="100" required>
+
+        <label>誰花的</label>
+        <select name="測試員">
+            <option value="小明">小明</option>
+            <option value="小美">小美</option>
+        </select>
+
+        <button type="submit">送出記帳</button>
+    </form>
+</div>
+
+<script>
+    // 這個腳本是為了讓送出後不要跳轉到白畫面，而是顯示成功
+    const form = document.getElementById('accountingForm');
+    form.addEventListener('submit', function(e) {
+        e.preventDefault(); // 阻止預設跳轉
+        const formData = new FormData(form);
+        // 將參數組合成 URL
+        const params = new URLSearchParams(formData);
+        const url = form.action + '?' + params.toString();
+
+        fetch(url)
+            .then(response => {
+                alert('✅ 記帳成功！');
+                form.reset(); // 清空表單
+                // 如果是在 LIFF 中，可以在這裡加入關閉視窗的程式碼
+            })
+            .catch(error => {
+                alert('❌ 發生錯誤，請稍後再試');
+            });
+    });
+</script>
+
+</body>
+</html>
