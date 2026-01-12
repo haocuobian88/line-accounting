@@ -34,6 +34,7 @@
             padding: 24px;
             font-size: 24px;
             background: #f8f9fa;
+            margin-bottom: 0;
         }
 
         /* 分頁標籤 */
@@ -134,6 +135,7 @@
             transform: translateY(0);
         }
 
+        /* 移除數字輸入框的小箭頭 */
         input[type="number"]::-webkit-inner-spin-button,
         input[type="number"]::-webkit-outer-spin-button {
             -webkit-appearance: none;
@@ -145,13 +147,11 @@
     <div class="container">
         <h1>💰 記帳小幫手</h1>
         
-        <!-- 分頁標籤 -->
         <div class="tabs">
             <button class="tab active" data-tab="expense">支出</button>
             <button class="tab" data-tab="income">收入</button>
         </div>
 
-        <!-- 支出表單 -->
         <div id="expense-content" class="tab-content active">
             <div class="form-group">
                 <label for="expense-date">日期：</label>
@@ -195,7 +195,6 @@
             <button class="submit-btn" onclick="submitExpense()">送出記帳</button>
         </div>
 
-        <!-- 收入表單 -->
         <div id="income-content" class="tab-content">
             <div class="form-group">
                 <label for="income-date">日期：</label>
@@ -212,16 +211,21 @@
                 <select id="income-category" class="form-control">
                     <option value="薪資">💰 薪資</option>
                     <option value="獎金">🎁 獎金</option>
-                    <option value="股票除權息">📈 股票除權息</option>
+                    <option value="投資">📈 投資/股利</option>
+                    <option value="兼職">💼 兼職/外包</option>
                     <option value="退款">💸 退款</option>
-                    <option value="投案">💼 投案</option>
-                    <option value="補助">🏦 補助</option>
                     <option value="紅包">🧧 紅包</option>
+                    <option value="其他">📝 其他</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label for="income-bank">銀行帳戶：</label>
+                <label for="income-content-input">內容備註：</label>
+                <input type="text" id="income-content-input" placeholder="例如：1月薪資、中獎">
+            </div>
+
+            <div class="form-group">
+                <label for="income-bank">存入帳戶：</label>
                 <select id="income-bank" class="form-control">
                     <option value="中國信託">🏦 中國信託</option>
                     <option value="國泰世華">🏦 國泰世華</option>
@@ -249,12 +253,16 @@
         document.getElementById('expense-date').value = todayStr;
         document.getElementById('income-date').value = todayStr;
 
-        // 初始化 LIFF
+        // 初始化 LIFF (使用您提供的 ID)
         liff.init({ liffId: "2008642471-B6stNtQK" }).then(() => {
             console.log('LIFF 初始化成功');
+            if (!liff.isLoggedIn()) {
+                liff.login();
+            }
         }).catch((err) => {
             console.error('LIFF 初始化失敗:', err);
-            alert('LIFF 初始化失敗,請確認是否在 LINE 環境中開啟');
+            // 本地測試時可能會失敗，這行 alert 可在正式環境移除
+            // alert('LIFF 初始化失敗, 請確認是否在 LINE 環境中開啟'); 
         });
 
         // 分頁切換功能
@@ -281,11 +289,16 @@
             const payment = document.getElementById('expense-payment').value;
 
             // 防呆檢查
-            if (!amount || !content) {
-                alert("金額和內容記得填寫喔!");
+            if (!amount || amount <= 0) {
+                alert("金額記得填寫喔!");
+                return;
+            }
+            if (!content) {
+                alert("內容備註記得填寫喔!");
                 return;
             }
 
+            // 準備資料
             const data = {
                 type: "支出",
                 date: date,
@@ -293,6 +306,7 @@
                 category: category,
                 content: content,
                 payment: payment
+                // 支出這裡的 cardInfo 暫時留空，或之後依需求加入
             };
 
             sendToLine(data);
@@ -304,19 +318,25 @@
             const amount = document.getElementById('income-amount').value;
             const category = document.getElementById('income-category').value;
             const bank = document.getElementById('income-bank').value;
+            // 取得備註，如果沒填則用分類名稱代替
+            const contentInput = document.getElementById('income-content-input').value;
+            const content = contentInput ? contentInput : category;
 
             // 防呆檢查
-            if (!amount) {
+            if (!amount || amount <= 0) {
                 alert("金額記得填寫喔!");
                 return;
             }
 
+            // 準備資料
             const data = {
                 type: "收入",
                 date: date,
                 amount: amount,
                 category: category,
-                bank: bank
+                content: content,  // 寫入 Google Sheet E欄
+                payment: "存款",   // 寫入 Google Sheet G欄 (標記為存款)
+                cardInfo: bank     // 寫入 Google Sheet H欄 (銀行/帳戶)
             };
 
             sendToLine(data);
@@ -326,14 +346,20 @@
         function sendToLine(data) {
             const msg = "#LIFF記帳\n" + JSON.stringify(data);
             
-            liff.sendMessages([{
-                type: 'text',
-                text: msg
-            }]).then(() => {
-                liff.closeWindow();
-            }).catch((err) => {
-                alert('發送失敗: ' + err);
-            });
+            if (liff.isInClient()) {
+                liff.sendMessages([{
+                    type: 'text',
+                    text: msg
+                }]).then(() => {
+                    liff.closeWindow(); // 成功後關閉視窗
+                }).catch((err) => {
+                    alert('發送失敗: ' + err);
+                });
+            } else {
+                // 如果是在電腦瀏覽器測試
+                alert("測試模式(不會發送):\n" + msg);
+                console.log(msg);
+            }
         }
     </script>
 </body>
