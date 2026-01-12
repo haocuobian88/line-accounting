@@ -1,100 +1,340 @@
-<div class="form-group">
-  <label>收支類型：</label>
-  <div class="radio-group">
-    <label><input type="radio" name="type" value="支出" checked> 支出</label>
-    <label><input type="radio" name="type" value="收入"> 收入</label>
-  </div>
-</div>
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>記帳小幫手</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-<div class="form-group">
-  <label for="date">日期：</label>
-  <input type="date" id="date" class="form-control">
-</div>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
 
-<div class="form-group">
-  <label for="amount">金額：</label>
-  <input type="number" id="amount" inputmode="numeric" placeholder="輸入金額">
-</div>
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
 
-<div class="form-group">
-  <label for="category">分類：</label>
-  <select id="category" class="form-control">
-    <option value="餐飲">🍔 餐飲食品</option>
-    <option value="交通">🚗 交通通勤</option>
-    <option value="購物">🛍️ 日常購物</option>
-    <option value="娛樂">🎬 休閒娛樂</option>
-    <option value="居家">🏠 居家生活</option>
-    <option value="薪資">💰 薪資收入</option>
-    <option value="其他">📝 其他</option>
-  </select>
-</div>
+        h1 {
+            text-align: center;
+            color: #667eea;
+            padding: 24px;
+            font-size: 24px;
+            background: #f8f9fa;
+        }
 
-<div class="form-group">
-  <label for="content">內容備註：</label>
-  <input type="text" id="content" placeholder="例如：牛肉麵">
-</div>
+        /* 分頁標籤 */
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+        }
 
-<div class="form-group">
-  <label for="payment">支付方式：</label>
-  <select id="payment" class="form-control">
-    <option value="現金">💵 現金</option>
-    <option value="信用卡">💳 信用卡</option>
-    <option value="轉帳">🏦 銀行轉帳</option>
-    <option value="電子支付">📱 LinePay/街口</option>
-  </select>
-</div>
+        .tab {
+            flex: 1;
+            padding: 16px;
+            text-align: center;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            background: none;
+            font-size: 16px;
+        }
 
-<button id="submitBtn">送出記帳</button>
+        .tab.active {
+            color: #667eea;
+            background: white;
+            border-bottom: 3px solid #667eea;
+        }
 
-<script>
-// 1. 初始化 LIFF
-liff.init({ liffId: "2008642471-B6stNtQK" }).then(() => {
-    // 設定日期欄位預設為今天
-    document.getElementById('date').valueAsDate = new Date();
-});
+        .tab:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
 
-// 2. 按下按鈕時的動作
-document.getElementById('submitBtn').addEventListener('click', function() {
-    
-    // 抓取欄位資料
-    const type = document.querySelector('input[name="type"]:checked').value;
-    const date = document.getElementById('date').value; // 格式會是 yyyy-mm-dd
-    const amount = document.getElementById('amount').value;
-    const category = document.getElementById('category').value;
-    const content = document.getElementById('content').value;
-    const payment = document.getElementById('payment').value;
+        /* 內容區 */
+        .tab-content {
+            display: none;
+            padding: 24px;
+        }
 
-    // 簡單防呆
-    if (!amount || !content) {
-        alert("金額和內容記得填寫喔！");
-        return;
-    }
+        .tab-content.active {
+            display: block;
+        }
 
-    // 3. 組合成 JSON 物件 (這就是要傳給 GAS 的資料)
-    const data = {
-        type: type,
-        date: date, // 這裡傳 yyyy-mm-dd，您的 parseDate 函式可以處理
-        amount: amount,
-        category: category,
-        content: content,
-        payment: payment,
-        // cardInfo: "之後可以加", 
-        // note: "LIFF輸入"
-    };
+        .form-group {
+            margin-bottom: 20px;
+        }
 
-    // 4. 發送訊息給機器人
-    // 格式必須是：
-    // 第一行: #LIFF記帳
-    // 第二行: JSON 字串
-    const msg = "#LIFF記帳\n" + JSON.stringify(data);
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
 
-    liff.sendMessages([{
-        type: 'text',
-        text: msg
-    }]).then(() => {
-        liff.closeWindow(); // 發送成功後關閉視窗
-    }).catch((err) => {
-        alert('發送失敗: ' + err);
-    });
-});
+        .form-control,
+        input[type="number"],
+        input[type="text"],
+        input[type="date"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .form-control:focus,
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        select.form-control {
+            cursor: pointer;
+            background-color: white;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💰 記帳小幫手</h1>
+        
+        <!-- 分頁標籤 -->
+        <div class="tabs">
+            <button class="tab active" data-tab="expense">支出</button>
+            <button class="tab" data-tab="income">收入</button>
+        </div>
+
+        <!-- 支出表單 -->
+        <div id="expense-content" class="tab-content active">
+            <div class="form-group">
+                <label for="expense-date">日期：</label>
+                <input type="date" id="expense-date" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="expense-amount">金額：</label>
+                <input type="number" id="expense-amount" inputmode="numeric" placeholder="輸入金額">
+            </div>
+
+            <div class="form-group">
+                <label for="expense-category">分類：</label>
+                <select id="expense-category" class="form-control">
+                    <option value="餐飲">🍔 餐飲食品</option>
+                    <option value="交通">🚗 交通通勤</option>
+                    <option value="購物">🛍️ 日常購物</option>
+                    <option value="娛樂">🎬 休閒娛樂</option>
+                    <option value="居家">🏠 居家生活</option>
+                    <option value="醫療">💊 醫療保健</option>
+                    <option value="教育">📚 教育學習</option>
+                    <option value="其他">📝 其他</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="expense-content">內容備註：</label>
+                <input type="text" id="expense-content" placeholder="例如：牛肉麵">
+            </div>
+
+            <div class="form-group">
+                <label for="expense-payment">支付方式：</label>
+                <select id="expense-payment" class="form-control">
+                    <option value="現金">💵 現金</option>
+                    <option value="信用卡">💳 信用卡</option>
+                    <option value="轉帳">🏦 銀行轉帳</option>
+                    <option value="電子支付">📱 LinePay/街口</option>
+                </select>
+            </div>
+
+            <button class="submit-btn" onclick="submitExpense()">送出記帳</button>
+        </div>
+
+        <!-- 收入表單 -->
+        <div id="income-content" class="tab-content">
+            <div class="form-group">
+                <label for="income-date">日期：</label>
+                <input type="date" id="income-date" class="form-control">
+            </div>
+
+            <div class="form-group">
+                <label for="income-amount">金額：</label>
+                <input type="number" id="income-amount" inputmode="numeric" placeholder="輸入金額">
+            </div>
+
+            <div class="form-group">
+                <label for="income-category">收入分類：</label>
+                <select id="income-category" class="form-control">
+                    <option value="薪資">💰 薪資</option>
+                    <option value="獎金">🎁 獎金</option>
+                    <option value="股票除權息">📈 股票除權息</option>
+                    <option value="退款">💸 退款</option>
+                    <option value="投案">💼 投案</option>
+                    <option value="補助">🏦 補助</option>
+                    <option value="紅包">🧧 紅包</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="income-bank">銀行帳戶：</label>
+                <select id="income-bank" class="form-control">
+                    <option value="中國信託">🏦 中國信託</option>
+                    <option value="國泰世華">🏦 國泰世華</option>
+                    <option value="台新銀行">🏦 台新銀行</option>
+                    <option value="玉山銀行">🏦 玉山銀行</option>
+                    <option value="台北富邦">🏦 台北富邦</option>
+                    <option value="郵局">📮 郵局</option>
+                    <option value="現金">💵 現金</option>
+                    <option value="其他">🏦 其他銀行</option>
+                </select>
+            </div>
+
+            <button class="submit-btn" onclick="submitIncome()">送出記帳</button>
+        </div>
+    </div>
+
+    <script>
+        // 設定日期預設為今天
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const todayStr = `${year}-${month}-${day}`;
+        
+        document.getElementById('expense-date').value = todayStr;
+        document.getElementById('income-date').value = todayStr;
+
+        // 初始化 LIFF
+        liff.init({ liffId: "2008642471-B6stNtQK" }).then(() => {
+            console.log('LIFF 初始化成功');
+        }).catch((err) => {
+            console.error('LIFF 初始化失敗:', err);
+            alert('LIFF 初始化失敗,請確認是否在 LINE 環境中開啟');
+        });
+
+        // 分頁切換功能
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                // 移除所有 active 狀態
+                tabs.forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // 添加 active 狀態
+                this.classList.add('active');
+                const tabName = this.dataset.tab;
+                document.getElementById(`${tabName}-content`).classList.add('active');
+            });
+        });
+
+        // 送出支出記帳
+        function submitExpense() {
+            const date = document.getElementById('expense-date').value;
+            const amount = document.getElementById('expense-amount').value;
+            const category = document.getElementById('expense-category').value;
+            const content = document.getElementById('expense-content').value;
+            const payment = document.getElementById('expense-payment').value;
+
+            // 防呆檢查
+            if (!amount || !content) {
+                alert("金額和內容記得填寫喔!");
+                return;
+            }
+
+            const data = {
+                type: "支出",
+                date: date,
+                amount: amount,
+                category: category,
+                content: content,
+                payment: payment
+            };
+
+            sendToLine(data);
+        }
+
+        // 送出收入記帳
+        function submitIncome() {
+            const date = document.getElementById('income-date').value;
+            const amount = document.getElementById('income-amount').value;
+            const category = document.getElementById('income-category').value;
+            const bank = document.getElementById('income-bank').value;
+
+            // 防呆檢查
+            if (!amount) {
+                alert("金額記得填寫喔!");
+                return;
+            }
+
+            const data = {
+                type: "收入",
+                date: date,
+                amount: amount,
+                category: category,
+                bank: bank
+            };
+
+            sendToLine(data);
+        }
+
+        // 發送訊息給 LINE
+        function sendToLine(data) {
+            const msg = "#LIFF記帳\n" + JSON.stringify(data);
+            
+            liff.sendMessages([{
+                type: 'text',
+                text: msg
+            }]).then(() => {
+                liff.closeWindow();
+            }).catch((err) => {
+                alert('發送失敗: ' + err);
+            });
+        }
     </script>
+</body>
+</html>
