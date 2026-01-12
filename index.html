@@ -1,253 +1,100 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全能記帳本</title>
-    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { padding: 20px; background-color: #f8f9fa; }
-        .form-label { font-weight: bold; }
-        
-        /* 收支切換按鈕樣式 */
-        .btn-check:checked + .btn-outline-danger { background-color: #dc3545; color: white; }
-        .btn-check:checked + .btn-outline-success { background-color: #198754; color: white; }
-        
-        #overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255,255,255,0.95); z-index: 999;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-        }
-        #form-content { display: none; }
-    </style>
-</head>
-<body>
+<div class="form-group">
+  <label>收支類型：</label>
+  <div class="radio-group">
+    <label><input type="radio" name="type" value="支出" checked> 支出</label>
+    <label><input type="radio" name="type" value="收入"> 收入</label>
+  </div>
+</div>
 
-    <div id="overlay">
-        <div class="spinner-border text-primary mb-3" role="status"></div>
-        <div id="loadingText">正在讀取設定...</div>
-    </div>
+<div class="form-group">
+  <label for="date">日期：</label>
+  <input type="date" id="date" class="form-control">
+</div>
 
-    <div id="form-content" class="container">
-        
-        <div class="btn-group w-100 mb-4" role="group">
-            <input type="radio" class="btn-check" name="type" id="type_expense" value="支出" checked onchange="updateCategoryList()">
-            <label class="btn btn-outline-danger btn-lg" for="type_expense">📤 支出</label>
+<div class="form-group">
+  <label for="amount">金額：</label>
+  <input type="number" id="amount" inputmode="numeric" placeholder="輸入金額">
+</div>
 
-            <input type="radio" class="btn-check" name="type" id="type_income" value="收入" onchange="updateCategoryList()">
-            <label class="btn btn-outline-success btn-lg" for="type_income">📥 收入</label>
-        </div>
+<div class="form-group">
+  <label for="category">分類：</label>
+  <select id="category" class="form-control">
+    <option value="餐飲">🍔 餐飲食品</option>
+    <option value="交通">🚗 交通通勤</option>
+    <option value="購物">🛍️ 日常購物</option>
+    <option value="娛樂">🎬 休閒娛樂</option>
+    <option value="居家">🏠 居家生活</option>
+    <option value="薪資">💰 薪資收入</option>
+    <option value="其他">📝 其他</option>
+  </select>
+</div>
 
-        <form id="accountForm">
-            
-            <div class="row mb-3">
-                <div class="col-6">
-                    <label class="form-label">日期</label>
-                    <input type="date" class="form-control" id="date" required>
-                </div>
-                <div class="col-6">
-                    <label class="form-label">歸屬人</label>
-                    <select class="form-select" id="who">
-                        <option value="我" selected>我</option>
-                        <option value="家人">家人</option>
-                        <option value="公帳">公帳</option>
-                    </select>
-                </div>
-            </div>
+<div class="form-group">
+  <label for="content">內容備註：</label>
+  <input type="text" id="content" placeholder="例如：牛肉麵">
+</div>
 
-            <div class="mb-3">
-                <label class="form-label" id="categoryLabel">消費分類</label>
-                <select class="form-select" id="category" required>
-                    <option value="" disabled selected>載入中...</option>
-                </select>
-            </div>
+<div class="form-group">
+  <label for="payment">支付方式：</label>
+  <select id="payment" class="form-control">
+    <option value="現金">💵 現金</option>
+    <option value="信用卡">💳 信用卡</option>
+    <option value="轉帳">🏦 銀行轉帳</option>
+    <option value="電子支付">📱 LinePay/街口</option>
+  </select>
+</div>
 
-            <div class="mb-3">
-                <label class="form-label">項目說明</label>
-                <input type="text" class="form-control" id="item" placeholder="例如：午餐、薪水" required>
-            </div>
+<button id="submitBtn">送出記帳</button>
 
-            <div class="mb-3">
-                <label class="form-label">金額</label>
-                <div class="input-group">
-                    <span class="input-group-text">$</span>
-                    <input type="number" class="form-control form-control-lg" id="amount" placeholder="0" inputmode="numeric" required>
-                </div>
-            </div>
+<script>
+// 1. 初始化 LIFF
+liff.init({ liffId: "YOUR_LIFF_ID" }).then(() => {
+    // 設定日期欄位預設為今天
+    document.getElementById('date').valueAsDate = new Date();
+});
 
-            <div class="mb-3">
-                <label class="form-label">帳戶/方式</label>
-                <select class="form-select" id="payment" onchange="handlePaymentChange()" required>
-                    <option value="現金" selected>現金</option>
-                    <option value="信用卡">信用卡</option>
-                    <option value="銀行帳戶">銀行帳戶</option>
-                </select>
-            </div>
+// 2. 按下按鈕時的動作
+document.getElementById('submitBtn').addEventListener('click', function() {
+    
+    // 抓取欄位資料
+    const type = document.querySelector('input[name="type"]:checked').value;
+    const date = document.getElementById('date').value; // 格式會是 yyyy-mm-dd
+    const amount = document.getElementById('amount').value;
+    const category = document.getElementById('category').value;
+    const content = document.getElementById('content').value;
+    const payment = document.getElementById('payment').value;
 
-            <div class="mb-3" id="dynamicInfoGroup" style="display:none;">
-                <label class="form-label" id="dynamicLabel">選擇項目</label>
-                <select class="form-select" id="dynamicSelect">
-                    <option value="" disabled selected>請選擇...</option>
-                </select>
-            </div>
+    // 簡單防呆
+    if (!amount || !content) {
+        alert("金額和內容記得填寫喔！");
+        return;
+    }
 
-            <div class="mb-3">
-                <label class="form-label">備註</label>
-                <input type="text" class="form-control" id="note">
-            </div>
+    // 3. 組合成 JSON 物件 (這就是要傳給 GAS 的資料)
+    const data = {
+        type: type,
+        date: date, // 這裡傳 yyyy-mm-dd，您的 parseDate 函式可以處理
+        amount: amount,
+        category: category,
+        content: content,
+        payment: payment,
+        // cardInfo: "之後可以加", 
+        // note: "LIFF輸入"
+    };
 
-            <div class="d-grid gap-2 mt-4">
-                <button type="submit" class="btn btn-primary btn-lg">送出</button>
-            </div>
-        </form>
-    </div>
+    // 4. 發送訊息給機器人
+    // 格式必須是：
+    // 第一行: #LIFF記帳
+    // 第二行: JSON 字串
+    const msg = "#LIFF記帳\n" + JSON.stringify(data);
 
-    <script>
-        document.getElementById('date').valueAsDate = new Date();
-
-        // ========== 請修改這裡 ==========
-        const LIFF_ID = '2008642471-B6stNtQK; 
-        // 👇 這要是您 n8n "讀取選單" Webhook 的 Production URL
-        const API_URL = 'https://n8n-m7p3.zeabur.app/webhook-test/line'; 
-        // ==============================
-
-        let sheetData = {};
-
-        async function init() {
-            try {
-                await liff.init({ liffId: LIFF_ID });
-                if (!liff.isLoggedIn()) {
-                    liff.login();
-                    return;
-                }
-
-                // 呼叫 n8n 抓取選單
-                const response = await fetch(API_URL);
-                sheetData = await response.json();
-
-                // 初始化選單
-                updateCategoryList();
-
-                document.getElementById('overlay').style.display = 'none';
-                document.getElementById('form-content').style.display = 'block';
-
-            } catch (err) {
-                alert("錯誤: " + err);
-                document.getElementById('loadingText').innerText = "載入失敗";
-            }
-        }
-        init();
-
-        // 根據「支出/收入」切換下拉選單內容
-        function updateCategoryList() {
-            const isExpense = document.getElementById('type_expense').checked;
-            const categorySelect = document.getElementById('category');
-            const label = document.getElementById('categoryLabel');
-            
-            // 清空舊選項
-            categorySelect.innerHTML = '<option value="" disabled selected>請選擇分類...</option>';
-
-            let targetList = [];
-
-            if (isExpense) {
-                // 如果是支出，抓原本的「消費分類」
-                // ⚠️ 請確認您的 Google Sheet 選單設定頁，標題是 "消費分類"
-                label.innerText = "消費分類";
-                // 排除系統欄位，嘗試抓取所有非支付方式的欄位，或者直接指定欄位名稱
-                // 這裡假設您的 Sheet 標題是 "消費分類"
-                if (sheetData['消費分類']) {
-                     targetList = sheetData['消費分類'];
-                } else {
-                     // 備用方案：抓取第一欄 (如果標題改了)
-                     targetList = Object.values(sheetData)[0] || [];
-                }
-            } else {
-                // 如果是收入，抓剛剛新增的「收入分類」
-                label.innerText = "收入來源";
-                if (sheetData['收入分類']) {
-                    targetList = sheetData['收入分類'];
-                } else {
-                    targetList = ["薪資", "獎金", "投資", "其他"]; // 預設值防呆
-                }
-            }
-
-            // 產生選項
-            targetList.forEach(item => {
-                const option = document.createElement('option');
-                option.value = item;
-                option.text = item;
-                categorySelect.appendChild(option);
-            });
-        }
-
-        // 處理支付方式連動 (信用卡/銀行)
-        function handlePaymentChange() {
-            const payment = document.getElementById('payment').value;
-            const group = document.getElementById('dynamicInfoGroup');
-            const select = document.getElementById('dynamicSelect');
-            const label = document.getElementById('dynamicLabel');
-
-            select.innerHTML = '<option value="" disabled selected>請選擇...</option>';
-            select.value = "";
-            
-            let list = [];
-            
-            // 根據 Sheet 標題抓取資料
-            if (payment === '信用卡' && sheetData['信用卡']) list = sheetData['信用卡'];
-            if (payment === '銀行帳戶' && sheetData['銀行帳戶']) list = sheetData['銀行帳戶'];
-            // 收入時，銀行帳戶通常指「存入哪個帳戶」
-
-            if (list.length > 0) {
-                list.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item;
-                    option.text = item;
-                    select.appendChild(option);
-                });
-                group.style.display = 'block';
-                select.required = true;
-            } else {
-                group.style.display = 'none';
-                select.required = false;
-            }
-        }
-
-        document.getElementById('accountForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            if (!liff.isInClient()) { alert('請在 LINE 開啟'); return; }
-
-            // 取得收支類型
-            const type = document.querySelector('input[name="type"]:checked').value;
-            
-            // 處理細項資訊
-            let detailInfo = "";
-            const payment = document.getElementById('payment').value;
-            if (document.getElementById('dynamicInfoGroup').style.display !== 'none') {
-                detailInfo = document.getElementById('dynamicSelect').value;
-            }
-
-            const data = {
-                type: type, // 新增：支出 or 收入
-                date: document.getElementById('date').value.replace(/-/g, '/'),
-                who: document.getElementById('who').value,
-                category: document.getElementById('category').value,
-                content: document.getElementById('item').value,
-                amount: document.getElementById('amount').value,
-                payment: payment,
-                cardInfo: detailInfo,
-                note: document.getElementById('note').value
-            };
-
-            const messageText = `#LIFF記帳\n${JSON.stringify(data)}`;
-
-            try {
-                await liff.sendMessages([{ type: 'text', text: messageText }]);
-                liff.closeWindow();
-            } catch (error) {
-                alert('傳送失敗: ' + error);
-            }
-        });
+    liff.sendMessages([{
+        type: 'text',
+        text: msg
+    }]).then(() => {
+        liff.closeWindow(); // 發送成功後關閉視窗
+    }).catch((err) => {
+        alert('發送失敗: ' + err);
+    });
+});
     </script>
-</body>
-</html>
