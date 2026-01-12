@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>記帳小幫手</title>
-    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <title>記帳小幫手</title> <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         * {
             margin: 0;
@@ -35,6 +34,7 @@
             font-size: 24px;
             background: #f8f9fa;
             margin-bottom: 0;
+            font-weight: bold;
         }
 
         /* 分頁標籤 */
@@ -145,7 +145,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>💰 記帳小幫手</h1>
+        <h1>記帳小幫手</h1>
         
         <div class="tabs">
             <button class="tab active" data-tab="expense">支出</button>
@@ -253,7 +253,7 @@
         document.getElementById('expense-date').value = todayStr;
         document.getElementById('income-date').value = todayStr;
 
-        // 初始化 LIFF (使用您提供的 ID)
+        // 初始化 LIFF
         liff.init({ liffId: "2008642471-B6stNtQK" }).then(() => {
             console.log('LIFF 初始化成功');
             if (!liff.isLoggedIn()) {
@@ -261,19 +261,15 @@
             }
         }).catch((err) => {
             console.error('LIFF 初始化失敗:', err);
-            // 本地測試時可能會失敗，這行 alert 可在正式環境移除
-            // alert('LIFF 初始化失敗, 請確認是否在 LINE 環境中開啟'); 
         });
 
         // 分頁切換功能
         const tabs = document.querySelectorAll('.tab');
         tabs.forEach(tab => {
             tab.addEventListener('click', function() {
-                // 移除所有 active 狀態
                 tabs.forEach(t => t.classList.remove('active'));
                 document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
                 
-                // 添加 active 狀態
                 this.classList.add('active');
                 const tabName = this.dataset.tab;
                 document.getElementById(`${tabName}-content`).classList.add('active');
@@ -288,7 +284,6 @@
             const content = document.getElementById('expense-content').value;
             const payment = document.getElementById('expense-payment').value;
 
-            // 防呆檢查
             if (!amount || amount <= 0) {
                 alert("金額記得填寫喔!");
                 return;
@@ -298,7 +293,6 @@
                 return;
             }
 
-            // 準備資料
             const data = {
                 type: "支出",
                 date: date,
@@ -306,7 +300,6 @@
                 category: category,
                 content: content,
                 payment: payment
-                // 支出這裡的 cardInfo 暫時留空，或之後依需求加入
             };
 
             sendToLine(data);
@@ -318,31 +311,27 @@
             const amount = document.getElementById('income-amount').value;
             const category = document.getElementById('income-category').value;
             const bank = document.getElementById('income-bank').value;
-            // 取得備註，如果沒填則用分類名稱代替
             const contentInput = document.getElementById('income-content-input').value;
             const content = contentInput ? contentInput : category;
 
-            // 防呆檢查
             if (!amount || amount <= 0) {
                 alert("金額記得填寫喔!");
                 return;
             }
 
-            // 準備資料
             const data = {
                 type: "收入",
                 date: date,
                 amount: amount,
                 category: category,
-                content: content,  // 寫入 Google Sheet E欄
-                payment: "存款",   // 寫入 Google Sheet G欄 (標記為存款)
-                cardInfo: bank     // 寫入 Google Sheet H欄 (銀行/帳戶)
+                content: content,  
+                payment: "存款",   
+                cardInfo: bank     
             };
 
             sendToLine(data);
         }
 
-        // 發送訊息給 LINE
         function sendToLine(data) {
             const msg = "#LIFF記帳\n" + JSON.stringify(data);
             
@@ -351,14 +340,12 @@
                     type: 'text',
                     text: msg
                 }]).then(() => {
-                    liff.closeWindow(); // 成功後關閉視窗
+                    liff.closeWindow();
                 }).catch((err) => {
                     alert('發送失敗: ' + err);
                 });
             } else {
-                // 如果是在電腦瀏覽器測試
                 alert("測試模式(不會發送):\n" + msg);
-                console.log(msg);
             }
         }
     </script>
