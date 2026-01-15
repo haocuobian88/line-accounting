@@ -92,7 +92,7 @@
     <div class="app-container">
         <div id="loading-overlay">
             <div class="sparkle-spinner"></div>
-            <div class="loading-text" id="loading-msg">正在同步 Google Sheet 選單...</div>
+            <div class="loading-text" id="loading-msg">正在同步選單設定...</div>
         </div>
 
         <header>
@@ -188,7 +188,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label>收入備註</label>
+                    <label>收入備註 (選填)</label>
                     <div class="input-wrapper">
                         <input type="text" id="income-note" class="form-control" placeholder="例如：1月份薪資">
                     </div>
@@ -215,24 +215,20 @@
 
     <script>
         // ==========================================
-        // 🔴 設定區
+        // 🔴 設定區：請確認您的 Apps Script 網址
         // ==========================================
-        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbz1PzGfQ7K9L_v1d7GkM8j5O8p3T4lH_X2nQ1w6e5r7tY9u0i/exec"; 
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycby0o1zBGg9uaRG1aacvX1cLUKUIicaRnZvkruCzLFNrwo6jMaD6Wnvow9TrVfv_o_Jy/exec"; 
         const LIFF_ID = "2008642471-B6stNtQK"; 
         
-        // 全域變數，用來儲存從 Google Sheet 抓回來的完整資料
-        let fullMenuData = {};
-
-        // 獨立定義對應關係，方便管理
-        // 收入分類和支付方式還是單層選單，所以保留 Mapping
-        const SIMPLE_MAPPING = {
+        // Google Sheet 表頭對應 HTML ID
+        const MENU_MAPPING = {
+            "消費分類": "expense-category",  
             "收入分類": "income-category",
             "支付方式": "expense-payment",
             "轉帳": "income-bank"           
         };
 
-        // ==========================================
-        
+        let fullMenuData = {};
         let currentUser = { userId: "unknown", displayName: "WebUser" };
         let currentTab = 'expense';
 
@@ -252,84 +248,69 @@
             }
         }).catch(console.error);
 
-        // 🌟 核心功能：讀取資料並初始化選單
         async function fetchMenuData() {
             try {
                 const response = await fetch(GAS_API_URL); 
                 const data = await response.json();
-                
-                // 儲存完整資料到全域變數，供第二層選單使用
                 fullMenuData = data; 
-                console.log("🔥 成功取得選單資料:", fullMenuData);
+                console.log("選單資料:", fullMenuData);
 
-                // 1. 初始化第一層：消費分類 (D欄)
-                // 邏輯：fullMenuData 的所有 Keys 就是第一層的選項 (例如：餐飲, 交通...)
-                // 但要排除掉收入分類、支付方式等系統欄位
+                // 初始化消費分類 (排除系統欄位)
                 const systemKeys = ["收入分類", "支付方式", "轉帳", "銀行帳戶", "信用卡", "LinePay", "悠遊卡", "現金"]; 
                 const categorySelect = document.getElementById('expense-category');
-                
                 categorySelect.innerHTML = '<option value="" disabled selected>請選擇分類</option>';
                 
                 Object.keys(fullMenuData).forEach(key => {
-                    // 如果這個 Key 不在系統排除清單內，且真的有內容，就當作是消費主分類
                     if (!systemKeys.includes(key) && Array.isArray(fullMenuData[key])) {
                         addOption('expense-category', key, key);
                     }
                 });
 
-                // 2. 初始化其他簡單選單 (收入、支付方式...)
+                // 初始化其他簡單選單
                 populateSimpleSelects(data);
                 
                 document.getElementById('loading-overlay').style.display = 'none';
-
             } catch (error) {
-                console.error("載入選單失敗:", error);
+                console.error("載入失敗:", error);
                 document.getElementById('loading-msg').innerText = "載入失敗，請檢查網路";
-                document.getElementById('loading-msg').style.color = "orange";
                 setTimeout(() => { document.getElementById('loading-overlay').style.display = 'none'; }, 2000);
             }
         }
 
-        // 🌟 核心功能：當第一層改變時，更新第二層
         function updateSubCategory() {
             const mainCategory = document.getElementById('expense-category').value;
             const subSelect = document.getElementById('expense-content-select');
-            
-            // 清空第二層
             subSelect.innerHTML = '<option value="" disabled selected>請選擇內容</option>';
 
-            // 檢查是否有對應的資料
             if (mainCategory && fullMenuData[mainCategory]) {
                 const items = fullMenuData[mainCategory];
-                
                 if (items.length > 0) {
-                    items.forEach(item => {
-                        if(item !== "") addOption('expense-content-select', item, item);
-                    });
+                    items.forEach(item => { if(item !== "") addOption('expense-content-select', item, item); });
                 } else {
                     addOption('expense-content-select', mainCategory, `${mainCategory} (無細項)`);
                 }
             }
         }
 
-        // 初始化簡單選單
         function populateSimpleSelects(data) {
-            for (const [sheetHeader, htmlId] of Object.entries(SIMPLE_MAPPING)) {
-                const selectEl = document.getElementById(htmlId);
-                if (!selectEl) continue;
-                
-                selectEl.innerHTML = ''; 
-                const placeholder = document.createElement('option');
-                placeholder.text = `請選擇${sheetHeader}`;
-                placeholder.value = "";
-                placeholder.disabled = true;
-                placeholder.selected = true;
-                selectEl.appendChild(placeholder);
+            const SIMPLE_MAPPING_KEYS = ["收入分類", "支付方式", "轉帳"];
+            const HTML_IDS = ["income-category", "expense-payment", "income-bank"];
 
-                if (data[sheetHeader] && Array.isArray(data[sheetHeader])) {
-                    data[sheetHeader].forEach(item => {
-                        if(item !== "") addOption(htmlId, item, item);
-                    });
+            for (let i = 0; i < SIMPLE_MAPPING_KEYS.length; i++) {
+                const key = SIMPLE_MAPPING_KEYS[i];
+                const htmlId = HTML_IDS[i];
+                const selectEl = document.getElementById(htmlId);
+                
+                if (selectEl && data[key]) {
+                    selectEl.innerHTML = '';
+                    const placeholder = document.createElement('option');
+                    placeholder.text = "請選擇";
+                    placeholder.value = "";
+                    placeholder.disabled = true;
+                    placeholder.selected = true;
+                    selectEl.appendChild(placeholder);
+
+                    data[key].forEach(item => { if(item !== "") addOption(htmlId, item, item); });
                 }
             }
         }
@@ -342,7 +323,6 @@
             select.appendChild(option);
         }
 
-        // 執行載入
         fetchMenuData();
 
         function switchTab(tabName) {
@@ -367,40 +347,33 @@
             if (currentTab === 'expense') {
                 const amount = document.getElementById('expense-amount').value;
                 const category = document.getElementById('expense-category').value;
-                // 這裡改抓 下拉選單的值
                 const contentSelect = document.getElementById('expense-content-select').value;
-                // 備註
                 const note = document.getElementById('expense-note').value;
                 const payment = document.getElementById('expense-payment').value;
                 
                 if (!amount || amount <= 0) return alert("請輸入金額！");
                 if (!category) return alert("請選擇消費分類！");
-                if (!contentSelect) return alert("請選擇消費內容！"); // 原本是輸入，現在是選單
+                if (!contentSelect) return alert("請選擇消費內容！");
                 if (!payment) return alert("請選擇支付方式！");
 
-                // 組合內容：如果有寫備註，就變成 "午餐 (排骨飯)"，沒寫就只是 "午餐"
-                // 或者是將選單值當作主要內容，備註放在 Note 欄位
-                // 這裡我們將選單值傳給 content，備註傳給 note
-                
                 data = {
                     action: "addRecord",
                     type: "支出",
                     date: document.getElementById('expense-date').value,
                     amount: amount,
                     category: category,
-                    content: contentSelect, // 第二層選單的值 (例如: 早餐)
-                    note: note,             // 手動輸入的備註 (例如: 蛋餅)
+                    content: contentSelect, // E欄：存入選單選的細項
+                    note: note,             // I欄：存入手動備註
                     payment: payment,
                     userId: currentUser.userId
                 };
             } else {
                 const amount = document.getElementById('income-amount').value;
                 const cat = document.getElementById('income-category').value;
+                const note = document.getElementById('income-note').value;
                 
                 if (!amount || amount <= 0) return alert("請輸入金額！");
                 if (!cat) return alert("請選擇收入分類！");
-                
-                const note = document.getElementById('income-note').value;
 
                 data = {
                     action: "addRecord",
@@ -408,8 +381,8 @@
                     date: document.getElementById('income-date').value,
                     amount: amount,
                     category: cat,
-                    content: cat,      // 收入的內容通常等於分類
-                    note: note,        // 收入備註
+                    content: cat,      // E欄：收入內容預設等於分類
+                    note: note,        // I欄：存入手動備註
                     payment: "存款",
                     cardInfo: document.getElementById('income-bank').value,
                     userId: currentUser.userId
@@ -433,10 +406,9 @@
                 overlay.style.display = 'none';
                 alert("✅ 記帳成功！");
                 
-                // 清空輸入
+                // 清空欄位
                 document.getElementById('expense-amount').value = '';
                 document.getElementById('expense-note').value = '';
-                // 重置下拉選單
                 document.getElementById('expense-category').value = "";
                 document.getElementById('expense-content-select').innerHTML = '<option value="" disabled selected>請先選擇分類</option>';
 
