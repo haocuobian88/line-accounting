@@ -3,284 +3,581 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>記帳小幫手</title>
+    <title>記帳小幫手 AI</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    
     <style>
-        /* --- 原本的樣式保持不變 --- */
+        /* --- Gemini 風格變數定義 --- */
+        :root {
+            --primary-gradient: linear-gradient(135deg, #4285F4 0%, #9B72CB 100%); /* Google Blue to Purple */
+            --surface-color: #ffffff;
+            --background-color: #F0F4F9; /* Gemini 的淺灰藍底色 */
+            --text-main: #1F1F1F;
+            --text-sub: #5E5E5E;
+            --border-radius: 24px; /* 極致圓角 */
+            --input-bg: #F0F2F5;
+            --accent-color: #4285F4;
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 0; font-size: 16px; }
-        .container { max-width: 100%; min-height: 100vh; margin: 0 auto; background: white; display: flex; flex-direction: column; }
-        h1 { text-align: center; color: white; padding: 20px 16px; font-size: 22px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-weight: bold; letter-spacing: 1px; }
-        .tabs { display: flex; background: white; border-bottom: 1px solid #e0e0e0; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
-        .tab { flex: 1; padding: 16px 12px; text-align: center; font-weight: 600; color: #666; cursor: pointer; transition: all 0.2s; border: none; background: none; font-size: 17px; position: relative; }
-        .tab.active { color: #667eea; background: #f8f9ff; }
-        .tab.active::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: #667eea; }
-        .tab-content { display: none; padding: 20px 16px 100px; flex: 1; }
-        .tab-content.active { display: block; }
-        .form-group { margin-bottom: 24px; }
-        label { display: block; margin-bottom: 10px; color: #333; font-weight: 600; font-size: 15px; }
-        .form-control, input[type="number"], input[type="text"], input[type="date"] { width: 100%; padding: 14px 16px; border: 2px solid #e8e8e8; border-radius: 12px; font-size: 16px; transition: all 0.2s; background: #fafafa; }
-        .form-control:focus, input:focus { outline: none; border-color: #667eea; background: white; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
-        select.form-control { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; padding-right: 40px; }
-        .submit-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 12px; font-size: 17px; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-top: 10px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); position: fixed; bottom: 0; left: 0; right: 0; border-radius: 0; max-width: 100%; }
-        .submit-btn:active { transform: scale(0.98); opacity: 0.9; }
-        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-        input[type="number"] { -moz-appearance: textfield; }
-        input::placeholder { color: #aaa; font-size: 15px; }
-        input[type="number"][id*="amount"] { font-size: 24px; font-weight: 600; text-align: right; color: #667eea; letter-spacing: 1px; }
-
-        @media (min-width: 768px) {
-            .container { max-width: 500px; margin: 20px auto; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); min-height: auto; }
-            h1 { border-radius: 16px 16px 0 0; }
-            .submit-btn { position: relative; border-radius: 12px; }
-            .tab-content { padding: 24px 24px 24px; }
+        
+        body {
+            font-family: 'Roboto', 'Noto Sans TC', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
         }
 
-        /* --- 新增：Loading 遮罩樣式 --- */
-        #loading-overlay {
+        /* 模擬手機 APP 容器 */
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            background: var(--surface-color);
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 40px); /* 留一點邊距 */
+            max-height: 900px;
+        }
+
+        /* 標題區 (Gemini 的漸層文字) */
+        header {
+            padding: 30px 24px 10px;
+            text-align: left;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            font-size: 14px;
+            color: var(--text-sub);
+        }
+
+        /* 分頁切換 (Pill Shape) */
+        .tabs-container {
+            padding: 16px 24px;
+            background: var(--surface-color);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .tabs {
+            display: flex;
+            background: var(--input-bg);
+            border-radius: 50px;
+            padding: 4px;
+            position: relative;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--text-sub);
+            cursor: pointer;
+            z-index: 2;
+            transition: color 0.3s;
+            border: none;
+            background: transparent;
+        }
+
+        .tab.active {
+            color: var(--text-main);
+            font-weight: 700;
+        }
+
+        /* 滑動背景塊 */
+        .tab-indicator {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            width: calc(50% - 4px);
+            height: calc(100% - 8px);
+            background: var(--surface-color);
+            border-radius: 50px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            z-index: 1;
+        }
+
+        /* 內容捲動區 */
+        .content-scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 24px 100px; /* 底部留白給按鈕 */
+        }
+
+        .tab-content {
             display: none;
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 9999;
-            justify-content: center; align-items: center; flex-direction: column;
+            animation: fadeIn 0.4s ease;
         }
-        .spinner {
-            width: 50px; height: 50px;
-            border: 5px solid #fff; border-top: 5px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+        .tab-content.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        .loading-text { color: white; margin-top: 15px; font-weight: bold; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* 表單樣式 */
+        .form-group { margin-bottom: 24px; }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--text-sub);
+            font-weight: 600;
+            margin-left: 12px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            border-radius: 16px;
+            background: var(--input-bg);
+            transition: all 0.3s;
+        }
+
+        .input-wrapper:focus-within {
+            background: #fff;
+            box-shadow: 0 0 0 2px var(--accent-color);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 16px 20px;
+            border: none;
+            background: transparent;
+            font-size: 16px;
+            color: var(--text-main);
+            font-family: inherit;
+            border-radius: 16px;
+        }
+
+        .form-control:focus { outline: none; }
+
+        /* 金額輸入特別大 */
+        input[id*="amount"] {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent-color);
+        }
+
+        /* 下拉選單箭頭優化 */
+        select.form-control {
+            appearance: none;
+            cursor: pointer;
+        }
+        .select-arrow {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: var(--text-sub);
+        }
+
+        /* 按鈕區 */
+        .footer-actions {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 24px;
+            background: linear-gradient(to top, #fff 80%, rgba(255,255,255,0));
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 18px;
+            border: none;
+            border-radius: 50px;
+            background: var(--text-main); /* Gemini 常用的深色按鈕 */
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .submit-btn:active { transform: scale(0.98); }
+        
+        /* Loading 狀態 (Gemini Sparkle Animation) */
+        #loading-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255,255,255,0.9);
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+
+        .sparkle-spinner {
+            width: 40px;
+            height: 40px;
+            position: relative;
+            animation: rotate 2s linear infinite;
+        }
+        
+        .sparkle-spinner::before, .sparkle-spinner::after {
+            content: "✦";
+            position: absolute;
+            font-size: 30px;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .sparkle-spinner::before { top: 0; left: 0; animation: bounce 1s infinite; }
+        .sparkle-spinner::after { bottom: 0; right: 0; animation: bounce 1s infinite 0.5s; }
+
+        @keyframes rotate { 100% { transform: rotate(360deg); } }
+        @keyframes bounce { 0%, 100% { transform: scale(0.8); } 50% { transform: scale(1.2); } }
+
+        .loading-text {
+            margin-top: 15px;
+            font-weight: 500;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        /* 全螢幕響應 */
+        @media (max-width: 480px) {
+            body { padding: 0; background: var(--surface-color); }
+            .app-container { border-radius: 0; height: 100vh; max-height: none; box-shadow: none; }
+        }
     </style>
 </head>
 <body>
 
-    <div id="loading-overlay">
-        <div class="spinner"></div>
-        <div class="loading-text">資料傳送中...</div>
-    </div>
-
-    <div class="container">
-        <h1>💰 記帳小幫手</h1>
-        
-        <div class="tabs">
-            <button class="tab active" data-tab="expense">💸 支出</button>
-            <button class="tab" data-tab="income">💵 收入</button>
+    <div class="app-container">
+        <div id="loading-overlay">
+            <div class="sparkle-spinner"></div>
+            <div class="loading-text" id="loading-msg">正在載入選單設定...</div>
         </div>
 
-        <div id="expense-content" class="tab-content active">
-            <div class="form-group">
-                <label for="expense-date">📅 日期</label>
-                <input type="date" id="expense-date" class="form-control">
+        <header>
+            <h1>Hello, User</h1>
+            <div class="subtitle">今天想記錄哪一筆帳呢？</div>
+        </header>
+
+        <div class="tabs-container">
+            <div class="tabs">
+                <div class="tab-indicator" id="tab-indicator"></div>
+                <button class="tab active" onclick="switchTab('expense')">支出</button>
+                <button class="tab" onclick="switchTab('income')">收入</button>
             </div>
-            <div class="form-group">
-                <label for="expense-amount">💰 金額</label>
-                <input type="number" id="expense-amount" inputmode="numeric" placeholder="0">
-            </div>
-            <div class="form-group">
-                <label for="expense-category">🏷️ 分類</label>
-                <select id="expense-category" class="form-control">
-                    <option value="餐飲">🍔 餐飲食品</option>
-                    <option value="交通">🚗 交通通勤</option>
-                    <option value="購物">🛍️ 日常購物</option>
-                    <option value="娛樂">🎬 休閒娛樂</option>
-                    <option value="居家">🏠 居家生活</option>
-                    <option value="醫療">💊 醫療保健</option>
-                    <option value="教育">📚 教育學習</option>
-                    <option value="其他">📝 其他</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="expense-content">📝 內容備註</label>
-                <input type="text" id="expense-content" placeholder="例如：午餐牛肉麵">
-            </div>
-            <div class="form-group">
-                <label for="expense-payment">💳 支付方式</label>
-                <select id="expense-payment" class="form-control">
-                    <option value="現金">💵 現金</option>
-                    <option value="信用卡">💳 信用卡</option>
-                    <option value="轉帳">🏦 銀行轉帳</option>
-                    <option value="電子支付">📱 電子支付</option>
-                </select>
-            </div>
-            <button class="submit-btn" onclick="submitExpense()">✅ 送出記帳</button>
         </div>
 
-        <div id="income-content" class="tab-content">
-            <div class="form-group">
-                <label for="income-date">📅 日期</label>
-                <input type="date" id="income-date" class="form-control">
+        <div class="content-scroll-area">
+            <div id="expense-content" class="tab-content active">
+                <div class="form-group">
+                    <label>日期</label>
+                    <div class="input-wrapper">
+                        <input type="date" id="expense-date" class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>金額</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="expense-amount" class="form-control" inputmode="numeric" placeholder="0">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>消費分類</label>
+                    <div class="input-wrapper">
+                        <select id="expense-category" class="form-control">
+                            <option value="" disabled selected>載入中...</option>
+                        </select>
+                        <div class="select-arrow">▼</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>內容備註</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="expense-content" class="form-control" placeholder="例如：午餐牛肉麵">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>支付方式</label>
+                    <div class="input-wrapper">
+                        <select id="expense-payment" class="form-control">
+                            <option value="" disabled selected>載入中...</option>
+                        </select>
+                        <div class="select-arrow">▼</div>
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="income-amount">💰 金額</label>
-                <input type="number" id="income-amount" inputmode="numeric" placeholder="0">
+
+            <div id="income-content" class="tab-content">
+                <div class="form-group">
+                    <label>日期</label>
+                    <div class="input-wrapper">
+                        <input type="date" id="income-date" class="form-control">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>金額</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="income-amount" class="form-control" inputmode="numeric" placeholder="0">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>收入分類</label>
+                    <div class="input-wrapper">
+                        <select id="income-category" class="form-control">
+                             <option value="" disabled selected>載入中...</option>
+                        </select>
+                        <div class="select-arrow">▼</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>內容備註</label>
+                    <div class="input-wrapper">
+                        <input type="text" id="income-content-input" class="form-control" placeholder="例如：1月份薪資">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>存入帳戶</label>
+                    <div class="input-wrapper">
+                        <select id="income-bank" class="form-control">
+                             <option value="" disabled selected>載入中...</option>
+                        </select>
+                        <div class="select-arrow">▼</div>
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="income-category">🏷️ 收入分類</label>
-                <select id="income-category" class="form-control">
-                    <option value="薪資">💰 薪資</option>
-                    <option value="獎金">🎁 獎金</option>
-                    <option value="投資">📈 投資收益</option>
-                    <option value="兼職">💼 兼職外包</option>
-                    <option value="退款">💸 退款</option>
-                    <option value="紅包">🧧 紅包</option>
-                    <option value="其他">📝 其他</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="income-content-input">📝 內容備註</label>
-                <input type="text" id="income-content-input" placeholder="例如：1月份薪資">
-            </div>
-            <div class="form-group">
-                <label for="income-bank">🏦 存入帳戶</label>
-                <select id="income-bank" class="form-control">
-                    <option value="中國信託">🏦 中國信託</option>
-                    <option value="國泰世華">🏦 國泰世華</option>
-                    <option value="台新銀行">🏦 台新銀行</option>
-                    <option value="玉山銀行">🏦 玉山銀行</option>
-                    <option value="台北富邦">🏦 台北富邦</option>
-                    <option value="郵局">📮 郵局</option>
-                    <option value="現金">💵 現金</option>
-                    <option value="其他">🏦 其他銀行</option>
-                </select>
-            </div>
-            <button class="submit-btn" onclick="submitIncome()">✅ 送出記帳</button>
+        </div>
+
+        <div class="footer-actions">
+            <button class="submit-btn" onclick="submitData()">
+                <span>✨ 傳送記帳</span>
+            </button>
         </div>
     </div>
 
     <script>
         // ==========================================
-        // 🔴 請填入您的 Apps Script 發布網址 (Web App URL)
-        // 必須以 https://script.google.com/macros/s/... 開頭
+        // 🔴 設定區：請修改您的 Apps Script 網址與對應欄位
         // ==========================================
-        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxEKIKM63bcWW_72OgwSd3-FNlkNOOhm0qXf0ihr9Chrz6QVIdUZdDJQ99kUdi_mlet/exec"; 
-        const LIFF_ID = "2008642471-B6stNtQK"; // 您的 LIFF ID
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbz1PzGfQ7K9L_v1d7GkM8j5O8p3T4lH_X2nQ1w6e5r7tY9u0i/exec"; // 請換成您的 Web App URL
+        const LIFF_ID = "2008642471-B6stNtQK"; 
+        
+        // Google Sheet 表頭名稱 對應 HTML ID
+        // 請確保您的「選單設定」分頁第一列有這些標題
+        const MENU_MAPPING = {
+            "消費分類": "expense-category",
+            "收入分類": "income-category",  // 若 Sheet 沒這欄，請去新增，或改用其他標題
+            "支付方式": "expense-payment",
+            "轉帳": "income-bank"           // 收入的「存入帳戶」通常對應 Sheet 的「銀行帳戶」或「轉帳」欄位
+        };
 
+        // ==========================================
+        
         let currentUser = { userId: "unknown", displayName: "WebUser" };
+        let currentTab = 'expense';
 
-        // 初始化日期
+        // 初始化
         const todayStr = new Date().toISOString().split('T')[0];
         document.getElementById('expense-date').value = todayStr;
         document.getElementById('income-date').value = todayStr;
 
-        // 初始化 LIFF
+        // 1. 初始化 LIFF
         liff.init({ liffId: LIFF_ID }).then(() => {
-            console.log('LIFF 初始化成功');
             if (liff.isLoggedIn()) {
                 liff.getProfile().then(profile => {
                     currentUser.userId = profile.userId;
                     currentUser.displayName = profile.displayName;
+                    document.querySelector('h1').innerText = `Hello, ${profile.displayName}`;
                 });
             } else {
                 liff.login();
             }
-        }).catch((err) => {
-            console.warn('LIFF 初始化失敗或非 LINE 環境', err);
-        });
+        }).catch(console.error);
 
-        // Tab 切換
-        const tabs = document.querySelectorAll('.tab');
-        tabs.forEach(tab => {
-            tab.addEventListener('click', function() {
-                tabs.forEach(t => t.classList.remove('active'));
-                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                this.classList.add('active');
-                document.getElementById(`${this.dataset.tab}-content`).classList.add('active');
-            });
-        });
-
-        function showLoading(show) {
-            document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
+        // 2. 抓取 Google Sheet 選單資料 (動態載入核心)
+        async function fetchMenuData() {
+            try {
+                const response = await fetch(GAS_API_URL); // 呼叫 GAS 的 doGet
+                const data = await response.json();
+                
+                console.log("取得選單資料:", data);
+                populateSelects(data);
+                
+                // 隱藏 Loading
+                document.getElementById('loading-overlay').style.display = 'none';
+            } catch (error) {
+                console.error("載入選單失敗:", error);
+                document.getElementById('loading-msg').innerText = "載入失敗，請檢查網路或 URL";
+                document.getElementById('loading-msg').style.color = "red";
+                
+                // 失敗時填入預設選項，避免無法使用
+                addOption('expense-category', '餐飲', '餐飲');
+                addOption('expense-category', '交通', '交通');
+                document.getElementById('loading-overlay').style.display = 'none';
+            }
         }
 
-        function submitExpense() {
-            const date = document.getElementById('expense-date').value;
-            const amount = document.getElementById('expense-amount').value;
-            const category = document.getElementById('expense-category').value;
-            const content = document.getElementById('expense-content').value;
-            const payment = document.getElementById('expense-payment').value;
-
-            if (!amount || amount <= 0) return alert("請輸入金額！");
-            if (!content) return alert("請填寫內容備註！");
-
-            const data = {
-                action: "addRecord", // 告訴後端這是新增紀錄
-                type: "支出",
-                date: date,
-                amount: amount,
-                category: category,
-                content: content,
-                payment: payment,
-                userId: currentUser.userId
-            };
-
-            sendDataToGAS(data);
-        }
-
-        function submitIncome() {
-            const date = document.getElementById('income-date').value;
-            const amount = document.getElementById('income-amount').value;
-            const category = document.getElementById('income-category').value;
-            const bank = document.getElementById('income-bank').value;
-            const contentInput = document.getElementById('income-content-input').value;
-            const content = contentInput ? contentInput : category;
-
-            if (!amount || amount <= 0) return alert("請輸入金額！");
-
-            const data = {
-                action: "addRecord",
-                type: "收入",
-                date: date,
-                amount: amount,
-                category: category,
-                content: content,
-                payment: "存款",
-                cardInfo: bank,
-                userId: currentUser.userId
-            };
-
-            sendDataToGAS(data);
-        }
-
-        // 修改後的傳送函式：直接 POST 到 Apps Script
-        function sendDataToGAS(data) {
-            showLoading(true);
-
-            // 使用 fetch 發送請求
-            // mode: 'no-cors' 是關鍵，因為 GAS 通常會有 CORS 問題，
-            // 但 no-cors 模式下我們無法讀取回應內容，只能假設送出即成功。
-            // 比較好的做法是後端設定正確的 CORS Header，這裡採用標準 POST。
+        // 將資料填入 Select
+        function populateSelects(data) {
+            // data 格式預期為: { "消費分類": ["早餐", "午餐"], "支付方式": ["現金", "刷卡"] ... }
             
+            for (const [sheetHeader, htmlId] of Object.entries(MENU_MAPPING)) {
+                const selectEl = document.getElementById(htmlId);
+                if (!selectEl) continue;
+                
+                // 清空原本的 "載入中..."
+                selectEl.innerHTML = ''; 
+
+                // 檢查 API 是否有回傳對應標題的資料
+                if (data[sheetHeader] && Array.isArray(data[sheetHeader])) {
+                    data[sheetHeader].forEach(item => {
+                        if(item !== "") addOption(htmlId, item, item);
+                    });
+                } else {
+                    // 若找不到對應標題，加入提示
+                    addOption(htmlId, "", `(未找到 "${sheetHeader}" 選單)`);
+                }
+            }
+        }
+
+        function addOption(selectId, value, text) {
+            const select = document.getElementById(selectId);
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = text;
+            select.appendChild(option);
+        }
+
+        // 執行載入
+        fetchMenuData();
+
+
+        // Tab 切換邏輯
+        function switchTab(tabName) {
+            currentTab = tabName;
+            
+            // UI 狀態更新
+            document.querySelectorAll('.tab').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(div => div.classList.remove('active'));
+            
+            // 找出是第幾個 tab 來移動滑塊
+            const indicator = document.getElementById('tab-indicator');
+            if (tabName === 'expense') {
+                indicator.style.transform = 'translateX(0%)';
+                document.querySelector('.tab:nth-child(2)').classList.add('active'); // 因為第一個 child 是 indicator
+            } else {
+                indicator.style.transform = 'translateX(100%)';
+                document.querySelector('.tab:nth-child(3)').classList.add('active');
+            }
+
+            document.getElementById(`${tabName}-content`).classList.add('active');
+        }
+
+        // 送出資料
+        function submitData() {
+            let data = {};
+            
+            if (currentTab === 'expense') {
+                const amount = document.getElementById('expense-amount').value;
+                const content = document.getElementById('expense-content').value;
+                
+                if (!amount || amount <= 0) return alert("請輸入金額！");
+                if (!content) return alert("請填寫內容備註！");
+
+                data = {
+                    action: "addRecord",
+                    type: "支出",
+                    date: document.getElementById('expense-date').value,
+                    amount: amount,
+                    category: document.getElementById('expense-category').value,
+                    content: content,
+                    payment: document.getElementById('expense-payment').value,
+                    userId: currentUser.userId
+                };
+            } else {
+                const amount = document.getElementById('income-amount').value;
+                
+                if (!amount || amount <= 0) return alert("請輸入金額！");
+                
+                const cat = document.getElementById('income-category').value;
+                const note = document.getElementById('income-content-input').value;
+
+                data = {
+                    action: "addRecord",
+                    type: "收入",
+                    date: document.getElementById('income-date').value,
+                    amount: amount,
+                    category: cat,
+                    content: note ? note : cat,
+                    payment: "存款",
+                    cardInfo: document.getElementById('income-bank').value,
+                    userId: currentUser.userId
+                };
+            }
+
+            sendDataToGAS(data);
+        }
+
+        function sendDataToGAS(data) {
+            // 顯示 Loading
+            const overlay = document.getElementById('loading-overlay');
+            document.getElementById('loading-msg').innerText = "資料傳送中...";
+            overlay.style.display = 'flex';
+
             fetch(GAS_API_URL, {
                 method: "POST",
-                // Apps Script 接收純文字比較不容易出錯
                 body: JSON.stringify(data),
-                headers: {
-                    "Content-Type": "text/plain;charset=utf-8" 
-                }
+                headers: { "Content-Type": "text/plain;charset=utf-8" }
             })
             .then(response => {
-                // 如果後端有設定 CORS，這裡可以讀取回應
-                // 如果沒有設定，可能會進入 catch 或得到 opaque response
-                showLoading(false);
+                overlay.style.display = 'none';
                 alert("✅ 記帳成功！");
                 
-                // 清空輸入框 (可選)
+                // 清空輸入
                 document.getElementById('expense-amount').value = '';
                 document.getElementById('expense-content').value = '';
                 document.getElementById('income-amount').value = '';
                 document.getElementById('income-content-input').value = '';
                 
-                // 關閉視窗 (如果是在 LINE 裡面)
-                if (liff.isInClient()) {
-                    liff.closeWindow();
-                }
+                if (liff.isInClient()) liff.closeWindow();
             })
             .catch(error => {
-                showLoading(false);
-                console.error('Error:', error);
-                alert("❌ 發送失敗，請檢查網路或 Apps Script 設定");
+                overlay.style.display = 'none';
+                alert("❌ 發送失敗：" + error);
             });
         }
     </script>
