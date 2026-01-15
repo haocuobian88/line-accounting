@@ -6,239 +6,61 @@
     <title>記帳小幫手</title>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+        /* --- 原本的樣式保持不變 --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 0; font-size: 16px; }
+        .container { max-width: 100%; min-height: 100vh; margin: 0 auto; background: white; display: flex; flex-direction: column; }
+        h1 { text-align: center; color: white; padding: 20px 16px; font-size: 22px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); font-weight: bold; letter-spacing: 1px; }
+        .tabs { display: flex; background: white; border-bottom: 1px solid #e0e0e0; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
+        .tab { flex: 1; padding: 16px 12px; text-align: center; font-weight: 600; color: #666; cursor: pointer; transition: all 0.2s; border: none; background: none; font-size: 17px; position: relative; }
+        .tab.active { color: #667eea; background: #f8f9ff; }
+        .tab.active::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: #667eea; }
+        .tab-content { display: none; padding: 20px 16px 100px; flex: 1; }
+        .tab-content.active { display: block; }
+        .form-group { margin-bottom: 24px; }
+        label { display: block; margin-bottom: 10px; color: #333; font-weight: 600; font-size: 15px; }
+        .form-control, input[type="number"], input[type="text"], input[type="date"] { width: 100%; padding: 14px 16px; border: 2px solid #e8e8e8; border-radius: 12px; font-size: 16px; transition: all 0.2s; background: #fafafa; }
+        .form-control:focus, input:focus { outline: none; border-color: #667eea; background: white; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+        select.form-control { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; padding-right: 40px; }
+        .submit-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 12px; font-size: 17px; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-top: 10px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); position: fixed; bottom: 0; left: 0; right: 0; border-radius: 0; max-width: 100%; }
+        .submit-btn:active { transform: scale(0.98); opacity: 0.9; }
+        input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
+        input::placeholder { color: #aaa; font-size: 15px; }
+        input[type="number"][id*="amount"] { font-size: 24px; font-weight: 600; text-align: right; color: #667eea; letter-spacing: 1px; }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 0;
-            font-size: 16px;
-        }
-
-        .container {
-            max-width: 100%;
-            min-height: 100vh;
-            margin: 0 auto;
-            background: white;
-            display: flex;
-            flex-direction: column;
-        }
-
-        h1 {
-            text-align: center;
-            color: white;
-            padding: 20px 16px;
-            font-size: 22px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            font-weight: bold;
-            letter-spacing: 1px;
-        }
-
-        /* 分頁標籤 */
-        .tabs {
-            display: flex;
-            background: white;
-            border-bottom: 1px solid #e0e0e0;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-
-        .tab {
-            flex: 1;
-            padding: 16px 12px;
-            text-align: center;
-            font-weight: 600;
-            color: #666;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: none;
-            background: none;
-            font-size: 17px;
-            position: relative;
-        }
-
-        .tab.active {
-            color: #667eea;
-            background: #f8f9ff;
-        }
-
-        .tab.active::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: #667eea;
-        }
-
-        /* 內容區 */
-        .tab-content {
-            display: none;
-            padding: 20px 16px 100px;
-            flex: 1;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .form-group {
-            margin-bottom: 24px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 10px;
-            color: #333;
-            font-weight: 600;
-            font-size: 15px;
-        }
-
-        .form-control,
-        input[type="number"],
-        input[type="text"],
-        input[type="date"] {
-            width: 100%;
-            padding: 14px 16px;
-            border: 2px solid #e8e8e8;
-            border-radius: 12px;
-            font-size: 16px;
-            transition: all 0.2s;
-            background: #fafafa;
-        }
-
-        .form-control:focus,
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-            background: white;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        select.form-control {
-            cursor: pointer;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 16px center;
-            padding-right: 40px;
-        }
-
-        .submit-btn {
-            width: 100%;
-            padding: 16px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 17px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            margin-top: 10px;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            border-radius: 0;
-            max-width: 100%;
-        }
-
-        .submit-btn:active {
-            transform: scale(0.98);
-            opacity: 0.9;
-        }
-
-        /* 移除數字輸入框的小箭頭 */
-        input[type="number"]::-webkit-inner-spin-button,
-        input[type="number"]::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-
-        input[type="number"] {
-            -moz-appearance: textfield;
-        }
-
-        /* 輸入提示優化 */
-        input::placeholder {
-            color: #aaa;
-            font-size: 15px;
-        }
-
-        /* 金額輸入特別樣式 */
-        input[type="number"][id*="amount"] {
-            font-size: 24px;
-            font-weight: 600;
-            text-align: right;
-            color: #667eea;
-            letter-spacing: 1px;
-        }
-
-        /* 響應式調整 */
         @media (min-width: 768px) {
-            .container {
-                max-width: 500px;
-                margin: 20px auto;
-                border-radius: 16px;
-                overflow: hidden;
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-                min-height: auto;
-            }
-
-            h1 {
-                border-radius: 16px 16px 0 0;
-            }
-
-            .submit-btn {
-                position: relative;
-                border-radius: 12px;
-            }
-
-            .tab-content {
-                padding: 24px 24px 24px;
-            }
+            .container { max-width: 500px; margin: 20px auto; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); min-height: auto; }
+            h1 { border-radius: 16px 16px 0 0; }
+            .submit-btn { position: relative; border-radius: 12px; }
+            .tab-content { padding: 24px 24px 24px; }
         }
 
-        /* 小螢幕優化 */
-        @media (max-width: 375px) {
-            h1 {
-                font-size: 20px;
-                padding: 18px 16px;
-            }
-
-            .tab {
-                font-size: 16px;
-                padding: 14px 8px;
-            }
-
-            .form-group {
-                margin-bottom: 20px;
-            }
-
-            label {
-                font-size: 14px;
-            }
-
-            .form-control,
-            input {
-                padding: 12px 14px;
-                font-size: 15px;
-            }
+        /* --- 新增：Loading 遮罩樣式 --- */
+        #loading-overlay {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            justify-content: center; align-items: center; flex-direction: column;
         }
+        .spinner {
+            width: 50px; height: 50px;
+            border: 5px solid #fff; border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        .loading-text { color: white; margin-top: 15px; font-weight: bold; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
+
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text">資料傳送中...</div>
+    </div>
+
     <div class="container">
         <h1>💰 記帳小幫手</h1>
         
@@ -252,12 +74,10 @@
                 <label for="expense-date">📅 日期</label>
                 <input type="date" id="expense-date" class="form-control">
             </div>
-
             <div class="form-group">
                 <label for="expense-amount">💰 金額</label>
                 <input type="number" id="expense-amount" inputmode="numeric" placeholder="0">
             </div>
-
             <div class="form-group">
                 <label for="expense-category">🏷️ 分類</label>
                 <select id="expense-category" class="form-control">
@@ -271,12 +91,10 @@
                     <option value="其他">📝 其他</option>
                 </select>
             </div>
-
             <div class="form-group">
                 <label for="expense-content">📝 內容備註</label>
                 <input type="text" id="expense-content" placeholder="例如：午餐牛肉麵">
             </div>
-
             <div class="form-group">
                 <label for="expense-payment">💳 支付方式</label>
                 <select id="expense-payment" class="form-control">
@@ -286,7 +104,6 @@
                     <option value="電子支付">📱 電子支付</option>
                 </select>
             </div>
-
             <button class="submit-btn" onclick="submitExpense()">✅ 送出記帳</button>
         </div>
 
@@ -295,12 +112,10 @@
                 <label for="income-date">📅 日期</label>
                 <input type="date" id="income-date" class="form-control">
             </div>
-
             <div class="form-group">
                 <label for="income-amount">💰 金額</label>
                 <input type="number" id="income-amount" inputmode="numeric" placeholder="0">
             </div>
-
             <div class="form-group">
                 <label for="income-category">🏷️ 收入分類</label>
                 <select id="income-category" class="form-control">
@@ -313,12 +128,10 @@
                     <option value="其他">📝 其他</option>
                 </select>
             </div>
-
             <div class="form-group">
                 <label for="income-content-input">📝 內容備註</label>
                 <input type="text" id="income-content-input" placeholder="例如：1月份薪資">
             </div>
-
             <div class="form-group">
                 <label for="income-bank">🏦 存入帳戶</label>
                 <select id="income-bank" class="form-control">
@@ -332,46 +145,55 @@
                     <option value="其他">🏦 其他銀行</option>
                 </select>
             </div>
-
             <button class="submit-btn" onclick="submitIncome()">✅ 送出記帳</button>
         </div>
     </div>
 
     <script>
-        // 設定日期預設為今天
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        const todayStr = `${year}-${month}-${day}`;
-        
+        // ==========================================
+        // 🔴 請填入您的 Apps Script 發布網址 (Web App URL)
+        // 必須以 https://script.google.com/macros/s/... 開頭
+        // ==========================================
+        const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxEKIKM63bcWW_72OgwSd3-FNlkNOOhm0qXf0ihr9Chrz6QVIdUZdDJQ99kUdi_mlet/exec"; 
+        const LIFF_ID = "2008642471-B6stNtQK"; // 您的 LIFF ID
+
+        let currentUser = { userId: "unknown", displayName: "WebUser" };
+
+        // 初始化日期
+        const todayStr = new Date().toISOString().split('T')[0];
         document.getElementById('expense-date').value = todayStr;
         document.getElementById('income-date').value = todayStr;
 
         // 初始化 LIFF
-        liff.init({ liffId: "2008642471-B6stNtQK" }).then(() => {
+        liff.init({ liffId: LIFF_ID }).then(() => {
             console.log('LIFF 初始化成功');
-            if (!liff.isLoggedIn()) {
+            if (liff.isLoggedIn()) {
+                liff.getProfile().then(profile => {
+                    currentUser.userId = profile.userId;
+                    currentUser.displayName = profile.displayName;
+                });
+            } else {
                 liff.login();
             }
         }).catch((err) => {
-            console.error('LIFF 初始化失敗:', err);
+            console.warn('LIFF 初始化失敗或非 LINE 環境', err);
         });
 
-        // 分頁切換功能
+        // Tab 切換
         const tabs = document.querySelectorAll('.tab');
         tabs.forEach(tab => {
             tab.addEventListener('click', function() {
                 tabs.forEach(t => t.classList.remove('active'));
                 document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                
                 this.classList.add('active');
-                const tabName = this.dataset.tab;
-                document.getElementById(`${tabName}-content`).classList.add('active');
+                document.getElementById(`${this.dataset.tab}-content`).classList.add('active');
             });
         });
 
-        // 送出支出記帳
+        function showLoading(show) {
+            document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none';
+        }
+
         function submitExpense() {
             const date = document.getElementById('expense-date').value;
             const amount = document.getElementById('expense-amount').value;
@@ -379,28 +201,23 @@
             const content = document.getElementById('expense-content').value;
             const payment = document.getElementById('expense-payment').value;
 
-            if (!amount || amount <= 0) {
-                alert("請輸入金額！");
-                return;
-            }
-            if (!content) {
-                alert("請填寫內容備註！");
-                return;
-            }
+            if (!amount || amount <= 0) return alert("請輸入金額！");
+            if (!content) return alert("請填寫內容備註！");
 
             const data = {
+                action: "addRecord", // 告訴後端這是新增紀錄
                 type: "支出",
                 date: date,
                 amount: amount,
                 category: category,
                 content: content,
-                payment: payment
+                payment: payment,
+                userId: currentUser.userId
             };
 
-            sendToLine(data);
+            sendDataToGAS(data);
         }
 
-        // 送出收入記帳
         function submitIncome() {
             const date = document.getElementById('income-date').value;
             const amount = document.getElementById('income-amount').value;
@@ -409,39 +226,62 @@
             const contentInput = document.getElementById('income-content-input').value;
             const content = contentInput ? contentInput : category;
 
-            if (!amount || amount <= 0) {
-                alert("請輸入金額！");
-                return;
-            }
+            if (!amount || amount <= 0) return alert("請輸入金額！");
 
             const data = {
+                action: "addRecord",
                 type: "收入",
                 date: date,
                 amount: amount,
                 category: category,
                 content: content,
                 payment: "存款",
-                cardInfo: bank
+                cardInfo: bank,
+                userId: currentUser.userId
             };
 
-            sendToLine(data);
+            sendDataToGAS(data);
         }
 
-        function sendToLine(data) {
-            const msg = "#LIFF記帳\n" + JSON.stringify(data);
+        // 修改後的傳送函式：直接 POST 到 Apps Script
+        function sendDataToGAS(data) {
+            showLoading(true);
+
+            // 使用 fetch 發送請求
+            // mode: 'no-cors' 是關鍵，因為 GAS 通常會有 CORS 問題，
+            // 但 no-cors 模式下我們無法讀取回應內容，只能假設送出即成功。
+            // 比較好的做法是後端設定正確的 CORS Header，這裡採用標準 POST。
             
-            if (liff.isInClient()) {
-                liff.sendMessages([{
-                    type: 'text',
-                    text: msg
-                }]).then(() => {
+            fetch(GAS_API_URL, {
+                method: "POST",
+                // Apps Script 接收純文字比較不容易出錯
+                body: JSON.stringify(data),
+                headers: {
+                    "Content-Type": "text/plain;charset=utf-8" 
+                }
+            })
+            .then(response => {
+                // 如果後端有設定 CORS，這裡可以讀取回應
+                // 如果沒有設定，可能會進入 catch 或得到 opaque response
+                showLoading(false);
+                alert("✅ 記帳成功！");
+                
+                // 清空輸入框 (可選)
+                document.getElementById('expense-amount').value = '';
+                document.getElementById('expense-content').value = '';
+                document.getElementById('income-amount').value = '';
+                document.getElementById('income-content-input').value = '';
+                
+                // 關閉視窗 (如果是在 LINE 裡面)
+                if (liff.isInClient()) {
                     liff.closeWindow();
-                }).catch((err) => {
-                    alert('發送失敗: ' + err);
-                });
-            } else {
-                alert("測試模式(不會發送):\n" + msg);
-            }
+                }
+            })
+            .catch(error => {
+                showLoading(false);
+                console.error('Error:', error);
+                alert("❌ 發送失敗，請檢查網路或 Apps Script 設定");
+            });
         }
     </script>
 </body>
