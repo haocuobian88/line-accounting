@@ -2,75 +2,89 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>記帳小幫手</title> <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>記帳小幫手</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
+            padding: 0;
+            font-size: 16px;
         }
 
         .container {
-            max-width: 500px;
+            max-width: 100%;
+            min-height: 100vh;
             margin: 0 auto;
             background: white;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
         }
 
         h1 {
             text-align: center;
-            color: #667eea;
-            padding: 24px;
-            font-size: 24px;
-            background: #f8f9fa;
-            margin-bottom: 0;
+            color: white;
+            padding: 20px 16px;
+            font-size: 22px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             font-weight: bold;
+            letter-spacing: 1px;
         }
 
         /* 分頁標籤 */
         .tabs {
             display: flex;
-            background: #f8f9fa;
-            border-bottom: 2px solid #e0e0e0;
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
         }
 
         .tab {
             flex: 1;
-            padding: 16px;
+            padding: 16px 12px;
             text-align: center;
             font-weight: 600;
             color: #666;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s;
             border: none;
             background: none;
-            font-size: 16px;
+            font-size: 17px;
+            position: relative;
         }
 
         .tab.active {
             color: #667eea;
-            background: white;
-            border-bottom: 3px solid #667eea;
+            background: #f8f9ff;
         }
 
-        .tab:hover {
-            background: rgba(102, 126, 234, 0.1);
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #667eea;
         }
 
         /* 內容區 */
         .tab-content {
             display: none;
-            padding: 24px;
+            padding: 20px 16px 100px;
+            flex: 1;
         }
 
         .tab-content.active {
@@ -78,15 +92,15 @@
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
 
         label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             color: #333;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 15px;
         }
 
         .form-control,
@@ -94,45 +108,55 @@
         input[type="text"],
         input[type="date"] {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
+            padding: 14px 16px;
+            border: 2px solid #e8e8e8;
+            border-radius: 12px;
             font-size: 16px;
-            transition: border-color 0.3s;
+            transition: all 0.2s;
+            background: #fafafa;
         }
 
         .form-control:focus,
         input:focus {
             outline: none;
             border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
         select.form-control {
             cursor: pointer;
-            background-color: white;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            padding-right: 40px;
         }
 
         .submit-btn {
             width: 100%;
-            padding: 14px;
+            padding: 16px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 16px;
+            border-radius: 12px;
+            font-size: 17px;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.2s;
             margin-top: 10px;
-        }
-
-        .submit-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            border-radius: 0;
+            max-width: 100%;
         }
 
         .submit-btn:active {
-            transform: translateY(0);
+            transform: scale(0.98);
+            opacity: 0.9;
         }
 
         /* 移除數字輸入框的小箭頭 */
@@ -141,30 +165,101 @@
             -webkit-appearance: none;
             margin: 0;
         }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        /* 輸入提示優化 */
+        input::placeholder {
+            color: #aaa;
+            font-size: 15px;
+        }
+
+        /* 金額輸入特別樣式 */
+        input[type="number"][id*="amount"] {
+            font-size: 24px;
+            font-weight: 600;
+            text-align: right;
+            color: #667eea;
+            letter-spacing: 1px;
+        }
+
+        /* 響應式調整 */
+        @media (min-width: 768px) {
+            .container {
+                max-width: 500px;
+                margin: 20px auto;
+                border-radius: 16px;
+                overflow: hidden;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+                min-height: auto;
+            }
+
+            h1 {
+                border-radius: 16px 16px 0 0;
+            }
+
+            .submit-btn {
+                position: relative;
+                border-radius: 12px;
+            }
+
+            .tab-content {
+                padding: 24px 24px 24px;
+            }
+        }
+
+        /* 小螢幕優化 */
+        @media (max-width: 375px) {
+            h1 {
+                font-size: 20px;
+                padding: 18px 16px;
+            }
+
+            .tab {
+                font-size: 16px;
+                padding: 14px 8px;
+            }
+
+            .form-group {
+                margin-bottom: 20px;
+            }
+
+            label {
+                font-size: 14px;
+            }
+
+            .form-control,
+            input {
+                padding: 12px 14px;
+                font-size: 15px;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>記帳小幫手</h1>
+        <h1>💰 記帳小幫手</h1>
         
         <div class="tabs">
-            <button class="tab active" data-tab="expense">支出</button>
-            <button class="tab" data-tab="income">收入</button>
+            <button class="tab active" data-tab="expense">💸 支出</button>
+            <button class="tab" data-tab="income">💵 收入</button>
         </div>
 
         <div id="expense-content" class="tab-content active">
             <div class="form-group">
-                <label for="expense-date">日期：</label>
+                <label for="expense-date">📅 日期</label>
                 <input type="date" id="expense-date" class="form-control">
             </div>
 
             <div class="form-group">
-                <label for="expense-amount">金額：</label>
-                <input type="number" id="expense-amount" inputmode="numeric" placeholder="輸入金額">
+                <label for="expense-amount">💰 金額</label>
+                <input type="number" id="expense-amount" inputmode="numeric" placeholder="0">
             </div>
 
             <div class="form-group">
-                <label for="expense-category">分類：</label>
+                <label for="expense-category">🏷️ 分類</label>
                 <select id="expense-category" class="form-control">
                     <option value="餐飲">🍔 餐飲食品</option>
                     <option value="交通">🚗 交通通勤</option>
@@ -178,41 +273,41 @@
             </div>
 
             <div class="form-group">
-                <label for="expense-content">內容備註：</label>
-                <input type="text" id="expense-content" placeholder="例如：牛肉麵">
+                <label for="expense-content">📝 內容備註</label>
+                <input type="text" id="expense-content" placeholder="例如：午餐牛肉麵">
             </div>
 
             <div class="form-group">
-                <label for="expense-payment">支付方式：</label>
+                <label for="expense-payment">💳 支付方式</label>
                 <select id="expense-payment" class="form-control">
                     <option value="現金">💵 現金</option>
                     <option value="信用卡">💳 信用卡</option>
                     <option value="轉帳">🏦 銀行轉帳</option>
-                    <option value="電子支付">📱 LinePay/街口</option>
+                    <option value="電子支付">📱 電子支付</option>
                 </select>
             </div>
 
-            <button class="submit-btn" onclick="submitExpense()">送出記帳</button>
+            <button class="submit-btn" onclick="submitExpense()">✅ 送出記帳</button>
         </div>
 
         <div id="income-content" class="tab-content">
             <div class="form-group">
-                <label for="income-date">日期：</label>
+                <label for="income-date">📅 日期</label>
                 <input type="date" id="income-date" class="form-control">
             </div>
 
             <div class="form-group">
-                <label for="income-amount">金額：</label>
-                <input type="number" id="income-amount" inputmode="numeric" placeholder="輸入金額">
+                <label for="income-amount">💰 金額</label>
+                <input type="number" id="income-amount" inputmode="numeric" placeholder="0">
             </div>
 
             <div class="form-group">
-                <label for="income-category">收入分類：</label>
+                <label for="income-category">🏷️ 收入分類</label>
                 <select id="income-category" class="form-control">
                     <option value="薪資">💰 薪資</option>
                     <option value="獎金">🎁 獎金</option>
-                    <option value="投資">📈 投資/股利</option>
-                    <option value="兼職">💼 兼職/外包</option>
+                    <option value="投資">📈 投資收益</option>
+                    <option value="兼職">💼 兼職外包</option>
                     <option value="退款">💸 退款</option>
                     <option value="紅包">🧧 紅包</option>
                     <option value="其他">📝 其他</option>
@@ -220,12 +315,12 @@
             </div>
 
             <div class="form-group">
-                <label for="income-content-input">內容備註：</label>
-                <input type="text" id="income-content-input" placeholder="例如：1月薪資、中獎">
+                <label for="income-content-input">📝 內容備註</label>
+                <input type="text" id="income-content-input" placeholder="例如：1月份薪資">
             </div>
 
             <div class="form-group">
-                <label for="income-bank">存入帳戶：</label>
+                <label for="income-bank">🏦 存入帳戶</label>
                 <select id="income-bank" class="form-control">
                     <option value="中國信託">🏦 中國信託</option>
                     <option value="國泰世華">🏦 國泰世華</option>
@@ -238,7 +333,7 @@
                 </select>
             </div>
 
-            <button class="submit-btn" onclick="submitIncome()">送出記帳</button>
+            <button class="submit-btn" onclick="submitIncome()">✅ 送出記帳</button>
         </div>
     </div>
 
@@ -285,11 +380,11 @@
             const payment = document.getElementById('expense-payment').value;
 
             if (!amount || amount <= 0) {
-                alert("金額記得填寫喔!");
+                alert("請輸入金額！");
                 return;
             }
             if (!content) {
-                alert("內容備註記得填寫喔!");
+                alert("請填寫內容備註！");
                 return;
             }
 
@@ -315,7 +410,7 @@
             const content = contentInput ? contentInput : category;
 
             if (!amount || amount <= 0) {
-                alert("金額記得填寫喔!");
+                alert("請輸入金額！");
                 return;
             }
 
@@ -324,9 +419,9 @@
                 date: date,
                 amount: amount,
                 category: category,
-                content: content,  
-                payment: "存款",   
-                cardInfo: bank     
+                content: content,
+                payment: "存款",
+                cardInfo: bank
             };
 
             sendToLine(data);
