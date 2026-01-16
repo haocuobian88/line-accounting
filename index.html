@@ -44,13 +44,10 @@
             flex-direction: column;
             height: calc(100vh - 40px);
             max-height: 900px;
+            padding-top: 10px;
         }
 
-        header { padding: 30px 24px 10px; text-align: left; }
-        h1 { font-size: 28px; font-weight: 700; background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; display: inline-block; margin-bottom: 8px; }
-        .subtitle { font-size: 14px; color: var(--text-sub); }
-
-        .tabs-container { padding: 16px 24px; background: var(--surface-color); position: sticky; top: 0; z-index: 10; }
+        .tabs-container { padding: 10px 24px 16px; background: var(--surface-color); position: sticky; top: 0; z-index: 10; }
         .tabs { display: flex; background: var(--input-bg); border-radius: 50px; padding: 4px; position: relative; }
         .tab { flex: 1; padding: 12px; text-align: center; font-size: 15px; font-weight: 500; color: var(--text-sub); cursor: pointer; z-index: 2; transition: color 0.3s; border: none; background: transparent; }
         .tab.active { color: var(--text-main); font-weight: 700; }
@@ -67,7 +64,18 @@
         .input-wrapper:focus-within { background: #fff; box-shadow: 0 0 0 2px var(--accent-color); }
         .form-control { width: 100%; padding: 16px 20px; border: none; background: transparent; font-size: 16px; color: var(--text-main); font-family: inherit; border-radius: 16px; }
         .form-control:focus { outline: none; }
+        
+        /* 金額輸入特別樣式 */
         input[id*="amount"] { font-size: 24px; font-weight: 700; color: var(--accent-color); }
+        
+        /* ✅ 新增：日期輸入文字置中 */
+        input[type="date"] {
+            text-align: center;
+            /* 修正 iOS 上可能靠左的問題 */
+            display: block;
+            margin: 0 auto;
+        }
+
         select.form-control { appearance: none; cursor: pointer; }
         .select-arrow { position: absolute; right: 20px; top: 50%; transform: translateY(-50%); pointer-events: none; color: var(--text-sub); }
 
@@ -94,11 +102,6 @@
             <div class="sparkle-spinner"></div>
             <div class="loading-text" id="loading-msg">正在同步選單設定...</div>
         </div>
-
-        <header>
-            <h1>Hello, User</h1>
-            <div class="subtitle">今天想記錄哪一筆帳呢？</div>
-        </header>
 
         <div class="tabs-container">
             <div class="tabs">
@@ -220,11 +223,17 @@
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxCX_aNlAEUnGPhZtWvnlAq-TBga2-i7ZODB6Naxv2iLzBKr5yv3INp3kj02AKdWIh-/exec"; 
         const LIFF_ID = "2008642471-B6stNtQK"; 
         
-        // 🌟 獨立定義對應關係 (根據您的 Sheet 標題設定)
+        const MENU_MAPPING = {
+            "消費分類": "expense-category",  
+            "收入分類": "income-category",
+            "支付方式": "expense-payment",
+            "存入帳戶": "income-bank"
+        };
+        
         const SIMPLE_MAPPING = {
             "收入分類": "income-category",
             "支付方式": "expense-payment",
-            "存入帳戶": "income-bank"      // 修正：對應 Sheet 裡的「存入帳戶」欄位
+            "存入帳戶": "income-bank"
         };
 
         let fullMenuData = {};
@@ -240,7 +249,6 @@
                 liff.getProfile().then(profile => {
                     currentUser.userId = profile.userId;
                     currentUser.displayName = profile.displayName;
-                    document.querySelector('h1').innerText = `Hello, ${profile.displayName}`;
                 });
             } else {
                 liff.login();
@@ -254,20 +262,16 @@
                 fullMenuData = data; 
                 console.log("選單資料:", fullMenuData);
 
-                // 1. 初始化消費分類 (排除系統欄位)
-                // 這些是您 Sheet 裡有，但不應該出現在「支出主分類」的標題
                 const systemKeys = ["收入分類", "支付方式", "存入帳戶", "信用卡", "銀行貸款", "LinePay", "悠遊卡", "現金", "User ID", "對應暱稱"]; 
                 const categorySelect = document.getElementById('expense-category');
                 categorySelect.innerHTML = '<option value="" disabled selected>請選擇分類</option>';
                 
                 Object.keys(fullMenuData).forEach(key => {
-                    // 如果這個 key 不在排除名單，且有資料，就當作是支出分類
                     if (!systemKeys.includes(key) && Array.isArray(fullMenuData[key])) {
                         addOption('expense-category', key, key);
                     }
                 });
 
-                // 2. 初始化簡單選單 (收入、支付、銀行)
                 populateSimpleSelects(data);
                 
                 document.getElementById('loading-overlay').style.display = 'none';
@@ -278,7 +282,6 @@
             }
         }
 
-        // 當第一層分類改變時，更新第二層內容
         function updateSubCategory() {
             const mainCategory = document.getElementById('expense-category').value;
             const subSelect = document.getElementById('expense-content-select');
@@ -359,8 +362,8 @@
                     date: document.getElementById('expense-date').value,
                     amount: amount,
                     category: category,
-                    content: contentSelect, // E欄
-                    note: note,             // I欄
+                    content: contentSelect,
+                    note: note,
                     payment: payment,
                     userId: currentUser.userId
                 };
@@ -378,8 +381,8 @@
                     date: document.getElementById('income-date').value,
                     amount: amount,
                     category: cat,
-                    content: cat,      // E欄 (收入內容預設同分類)
-                    note: note,        // I欄
+                    content: cat,
+                    note: note,
                     payment: "存款",
                     cardInfo: document.getElementById('income-bank').value,
                     userId: currentUser.userId
