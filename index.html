@@ -215,17 +215,16 @@
 
     <script>
         // ==========================================
-        // 🔴 設定區：請確認您的 Apps Script 網址
+        // 🔴 設定區：請將下方的網址換成您 Apps Script 的最新網址
         // ==========================================
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxCX_aNlAEUnGPhZtWvnlAq-TBga2-i7ZODB6Naxv2iLzBKr5yv3INp3kj02AKdWIh-/exec"; 
         const LIFF_ID = "2008642471-B6stNtQK"; 
         
-        // Google Sheet 表頭對應 HTML ID
-        const MENU_MAPPING = {
-            "消費分類": "expense-category",  
+        // 🌟 獨立定義對應關係 (根據您的 Sheet 標題設定)
+        const SIMPLE_MAPPING = {
             "收入分類": "income-category",
             "支付方式": "expense-payment",
-            "轉帳": "income-bank"           
+            "存入帳戶": "income-bank"      // 修正：對應 Sheet 裡的「存入帳戶」欄位
         };
 
         let fullMenuData = {};
@@ -255,18 +254,20 @@
                 fullMenuData = data; 
                 console.log("選單資料:", fullMenuData);
 
-                // 初始化消費分類 (排除系統欄位)
-                const systemKeys = ["收入分類", "支付方式", "轉帳", "銀行帳戶", "信用卡", "LinePay", "悠遊卡", "現金"]; 
+                // 1. 初始化消費分類 (排除系統欄位)
+                // 這些是您 Sheet 裡有，但不應該出現在「支出主分類」的標題
+                const systemKeys = ["收入分類", "支付方式", "存入帳戶", "信用卡", "銀行貸款", "LinePay", "悠遊卡", "現金", "User ID", "對應暱稱"]; 
                 const categorySelect = document.getElementById('expense-category');
                 categorySelect.innerHTML = '<option value="" disabled selected>請選擇分類</option>';
                 
                 Object.keys(fullMenuData).forEach(key => {
+                    // 如果這個 key 不在排除名單，且有資料，就當作是支出分類
                     if (!systemKeys.includes(key) && Array.isArray(fullMenuData[key])) {
                         addOption('expense-category', key, key);
                     }
                 });
 
-                // 初始化其他簡單選單
+                // 2. 初始化簡單選單 (收入、支付、銀行)
                 populateSimpleSelects(data);
                 
                 document.getElementById('loading-overlay').style.display = 'none';
@@ -277,6 +278,7 @@
             }
         }
 
+        // 當第一層分類改變時，更新第二層內容
         function updateSubCategory() {
             const mainCategory = document.getElementById('expense-category').value;
             const subSelect = document.getElementById('expense-content-select');
@@ -293,15 +295,10 @@
         }
 
         function populateSimpleSelects(data) {
-            const SIMPLE_MAPPING_KEYS = ["收入分類", "支付方式", "轉帳"];
-            const HTML_IDS = ["income-category", "expense-payment", "income-bank"];
-
-            for (let i = 0; i < SIMPLE_MAPPING_KEYS.length; i++) {
-                const key = SIMPLE_MAPPING_KEYS[i];
-                const htmlId = HTML_IDS[i];
+            for (const [sheetHeader, htmlId] of Object.entries(SIMPLE_MAPPING)) {
                 const selectEl = document.getElementById(htmlId);
                 
-                if (selectEl && data[key]) {
+                if (selectEl && data[sheetHeader]) {
                     selectEl.innerHTML = '';
                     const placeholder = document.createElement('option');
                     placeholder.text = "請選擇";
@@ -310,7 +307,7 @@
                     placeholder.selected = true;
                     selectEl.appendChild(placeholder);
 
-                    data[key].forEach(item => { if(item !== "") addOption(htmlId, item, item); });
+                    data[sheetHeader].forEach(item => { if(item !== "") addOption(htmlId, item, item); });
                 }
             }
         }
@@ -362,8 +359,8 @@
                     date: document.getElementById('expense-date').value,
                     amount: amount,
                     category: category,
-                    content: contentSelect, // E欄：存入選單選的細項
-                    note: note,             // I欄：存入手動備註
+                    content: contentSelect, // E欄
+                    note: note,             // I欄
                     payment: payment,
                     userId: currentUser.userId
                 };
@@ -381,8 +378,8 @@
                     date: document.getElementById('income-date').value,
                     amount: amount,
                     category: cat,
-                    content: cat,      // E欄：收入內容預設等於分類
-                    note: note,        // I欄：存入手動備註
+                    content: cat,      // E欄 (收入內容預設同分類)
+                    note: note,        // I欄
                     payment: "存款",
                     cardInfo: document.getElementById('income-bank').value,
                     userId: currentUser.userId
